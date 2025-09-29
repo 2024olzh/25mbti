@@ -1,0 +1,91 @@
+import pandas as pd
+import streamlit as st
+
+st.set_page_config(page_title="MBTI 하위 10개국", layout="wide")
+st.title("🔎 MBTI 유형별 비율이 낮은 하위 10개 국가")
+st.caption("MBTI를 선택하면, 해당 유형 비율이 가장 낮은 10개 국가를 보여줍니다.")
+
+# ----------------------------
+# 데이터 로드
+# ----------------------------
+@st.cache_data
+def load_data(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    assert "Country" in df.columns, "'Country' 열이 없습니다."
+    return df
+
+df = load_data("countriesMBTI_16types.csv")
+mbti_cols = [c for c in df.columns if c != "Country"]
+
+# ----------------------------
+# 국기 이모지 변환 유틸
+# ----------------------------
+# Streamlit에서 외부 라이브러리 없이, ISO2 코드로 국기 이모지 생성
+# (일부 특이 표기 국가는 예외 맵으로 처리)
+EXCEPTIONS = {
+    "Korea, Republic of": "KR",
+    "Korea, Democratic People's Republic of": "KP",
+    "United States of America": "US",
+    "United States": "US",
+    "United Kingdom": "GB",
+    "Czechia": "CZ",
+    "Czech Republic": "CZ",
+    "Russian Federation": "RU",
+    "Viet Nam": "VN",
+    "Iran, Islamic Republic of": "IR",
+    "Syrian Arab Republic": "SY",
+    "Venezuela, Bolivarian Republic of": "VE",
+    "Tanzania, United Republic of": "TZ",
+    "Moldova, Republic of": "MD",
+    "Bolivia, Plurinational State of": "BO",
+    "Lao People's Democratic Republic": "LA",
+    "Palestine, State of": "PS",
+    "Brunei Darussalam": "BN",
+    "Congo, Democratic Republic of the": "CD",
+    "Congo": "CG",
+    "Myanmar": "MM",
+    "Cabo Verde": "CV",
+    "Eswatini": "SZ",
+    "Timor-Leste": "TL",
+    "North Macedonia": "MK",
+    "Micronesia, Federated States of": "FM",
+    "Bahamas": "BS",
+    "Gambia": "GM",
+    "Sao Tome and Principe": "ST",
+    "Türkiye": "TR",
+    "Ivory Coast": "CI",
+    "Côte d'Ivoire": "CI",
+    "Taiwan, Province of China": "TW",
+    "Hong Kong": "HK",
+    "Macao": "MO",
+}
+
+# ISO2 추정 (예외 맵 → 잘 알려진 국가명 간단 추정 → 실패 시 빈 문자열)
+def country_to_iso2(name: str) -> str:
+    n = name.strip()
+    if n in EXCEPTIONS:
+        return EXCEPTIONS[n]
+    # 아주 단순한 휴리스틱: 쉼표 뒤 단어들을 제거하고 마지막 단어가 국가코드처럼 쓰이는 경우 대응 불가 → 빈 문자열
+    # (데이터 표기 다양성 때문에 완벽 매핑은 어려워 안전하게 예외맵 중심으로 처리)
+    COMMON = {
+        "France":"FR","Germany":"DE","Spain":"ES","Portugal":"PT","Italy":"IT","Poland":"PL",
+        "Netherlands":"NL","Belgium":"BE","Switzerland":"CH","Austria":"AT","Sweden":"SE",
+        "Norway":"NO","Denmark":"DK","Finland":"FI","Ireland":"IE","Iceland":"IS","Greece":"GR",
+        "Hungary":"HU","Romania":"RO","Bulgaria":"BG","Serbia":"RS","Croatia":"HR","Slovenia":"SI",
+        "Slovakia":"SK","Bosnia and Herzegovina":"BA","Albania":"AL","Montenegro":"ME","Kosovo":"XK",
+        "Andorra":"AD","Monaco":"MC","San Marino":"SM","Liechtenstein":"LI","Luxembourg":"LU",
+        "Russia":"RU","Ukraine":"UA","Belarus":"BY","Estonia":"EE","Latvia":"LV","Lithuania":"LT",
+        "United Arab Emirates":"AE","Saudi Arabia":"SA","Qatar":"QA","Bahrain":"BH","Kuwait":"KW","Oman":"OM",
+        "Israel":"IL","Jordan":"JO","Lebanon":"LB","Iraq":"IQ","Yemen":"YE",
+        "India":"IN","Pakistan":"PK","Bangladesh":"BD","Sri Lanka":"LK","Nepal":"NP","Bhutan":"BT","Maldives":"MV",
+        "China":"CN","Japan":"JP","Mongolia":"MN",
+        "Vietnam":"VN","Thailand":"TH","Malaysia":"MY","Singapore":"SG","Indonesia":"ID","Philippines":"PH","Cambodia":"KH","Laos":"LA","Brunei":"BN","Timor Leste":"TL",
+        "Australia":"AU","New Zealand":"NZ","Papua New Guinea":"PG","Fiji":"FJ",
+        "Canada":"CA","Mexico":"MX","Guatemala":"GT","Honduras":"HN","El Salvador":"SV","Nicaragua":"NI","Costa Rica":"CR","Panama":"PA",
+        "Cuba":"CU","Dominican Republic":"DO","Haiti":"HT","Jamaica":"JM","Trinidad and Tobago":"TT","Barbados":"BB","Bahamas":"BS",
+        "Brazil":"BR","Argentina":"AR","Chile":"CL","Uruguay":"UY","Paraguay":"PY","Bolivia":"BO","Peru":"PE","Ecuador":"EC","Colombia":"CO","Venezuela":"VE","Guyana":"GY","Suriname":"SR",
+        "South Africa":"ZA","Nigeria":"NG","Ghana":"GH","Kenya":"KE","Ethiopia":"ET","Somalia":"SO","Sudan":"SD","South Sudan":"SS","Uganda":"UG","Tanzania":"TZ","Rwanda":"RW","Burundi":"BI",
+        "DR Congo":"CD","Congo":"CG","Cameroon":"CM","Gabon":"GA","Equatorial Guinea":"GQ","Central African Republic":"CF","Chad":"TD","Niger":"NE","Mali":"ML","Senegal":"SN","Guinea":"GN","Guinea-Bissau":"GW","Sierra Leone":"SL","Liberia":"LR",
+        "Ivory Coast":"CI","Gambia":"GM","Cape Verde":"CV","Mauritania":"MR","Morocco":"MA","Algeria":"DZ","Tunisia":"TN","Libya":"LY","Egypt":"EG",
+        "Eritrea":"ER","Djibouti":"DJ","Madagascar":"MG","Mauritius":"MU","Seychelles":"SC","Mozambique":"MZ","Zambia":"ZM","Zimbabwe":"ZW","Malawi":"MW","Botswana":"BW","Namibia":"NA","Eswatini":"SZ","Lesotho":"LS",
+        "Armenia":"
